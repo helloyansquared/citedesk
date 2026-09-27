@@ -1,0 +1,190 @@
+{
+  "name": "CiteDesk · Nightly re-index",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🔄 CiteDesk nightly re-index\nEvery night CiteDesk re-reads its sources (files, folders, web pages), so the bot learns about updated prices or policies without anyone touching it. Unchanged passages keep their embeddings, so a quiet night costs nothing.\n\n### Setup (2 min)\n1. **Config** → `citedeskUrl`, `adminKey` (= `CITEDESK_ADMIN_KEY`), `telegramChatId`.\n2. **Report** → pick your *Telegram* credential.\n3. Click **Test workflow**, then **Publish**.\n\nBy default you only hear about it when a document changed or something failed.",
+        "height": 560,
+        "width": 500,
+        "color": 4
+      },
+      "id": "2439741e-5a2b-569b-8542-8d5edf3c3392",
+      "name": "Note: About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "0eab499d-612c-5672-aaa7-07017043caf8",
+      "name": "Every night at 3:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        160
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "7ee47f5b-c6f1-5456-9e24-d200b69e0508",
+      "name": "Test by hand",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n//  CITEDESK NIGHTLY RE-INDEX - SETTINGS\n//  Edit the values below, then save.\n// ============================================================\nreturn [{\n  json: {\n    // Where the CiteDesk server runs (from inside Docker use http://host.docker.internal:8000).\n    citedeskUrl: 'http://localhost:8000',\n\n    // CITEDESK_ADMIN_KEY of the server. Can stay '' when n8n and CiteDesk run on the same computer.\n    adminKey: '',\n\n    // Telegram chat that gets the report.\n    telegramChatId: 'YOUR_TELEGRAM_CHAT_ID',\n\n    // true = only send a message when a document changed or something failed.\n    onlyReportChanges: true,\n  },\n}];\n"
+      },
+      "id": "11d0ea7c-e165-5f0d-a481-18b84088e4b1",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.citedeskUrl.replace(/\\/$/, '') }}/reindex",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $json.adminKey }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "id": "0cf14d7d-425d-5b17-a9e7-507691f43aaa",
+      "name": "Re-index CiteDesk",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        260
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Reads the /reindex result (or the error) and writes a short report.\nconst cfg = $('Config').first().json;\nconst result = $input.first().json || {};\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst list = (items) => (items && items.length ? items.map(esc).join(', ') : '–');\n\nlet message;\nlet changed = false;\nif (result.error || result.ok !== true) {\n  const detail = result.error?.message || result.error?.description || result.detail || JSON.stringify(result).slice(0, 300);\n  message = `⚠️ <b>CiteDesk re-index failed</b>\\n${esc(detail)}`;\n  changed = true;\n} else {\n  const failed = Object.entries(result.failed || {});\n  changed = result.added.length + result.changed.length + result.removed.length + failed.length > 0;\n  message =\n    `🔄 <b>CiteDesk knowledge base refreshed</b>\\n` +\n    `${result.sources} documents, ${result.chunks} passages (${result.embedded} re-embedded) in ${result.seconds}s\\n\\n` +\n    `<b>Changed:</b> ${list(result.changed)}\\n` +\n    `<b>Added:</b> ${list(result.added)}\\n` +\n    `<b>Removed:</b> ${list(result.removed)}` +\n    (failed.length ? `\\n<b>Could not read:</b>\\n${failed.map(([k, v]) => `• ${esc(k)}: ${esc(v)}`).join('\\n')}` : '');\n}\n\nif (cfg.onlyReportChanges && !changed) {\n  return []; // nothing new: stay quiet\n}\nreturn [{ json: { chatId: cfg.telegramChatId, message, changed } }];\n"
+      },
+      "id": "013f2008-0a30-5adb-ac04-f56ec236293f",
+      "name": "Summarise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "ecfea859-de73-5b6a-8a45-8300d8cb495a",
+      "name": "Report",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        260
+      ]
+    }
+  ],
+  "connections": {
+    "Every night at 3:00": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test by hand": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Re-index CiteDesk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Re-index CiteDesk": {
+      "main": [
+        [
+          {
+            "node": "Summarise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarise": {
+      "main": [
+        [
+          {
+            "node": "Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

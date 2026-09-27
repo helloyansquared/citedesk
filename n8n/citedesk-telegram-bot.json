@@ -1,0 +1,182 @@
+{
+  "name": "CiteDesk · Telegram support bot",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 💬 CiteDesk on Telegram\nCustomers chat with your Telegram bot; every message is answered by CiteDesk from your documents, with sources. Follow-up questions work (the last 3 exchanges are remembered per chat). Questions the bot can't answer trigger the *Handoff alerts* workflow as usual.\n\n### Setup\n1. **Telegram message** → pick the Telegram credential of the bot customers will talk to.\n2. **Config** → `citedeskUrl`.\n3. **Publish**.\n\n⚠️ Telegram delivers messages to a public HTTPS webhook, so this n8n must be reachable from the internet (n8n Cloud, a VPS, or a tunnel with `WEBHOOK_URL` set).",
+        "height": 600,
+        "width": 500,
+        "color": 4
+      },
+      "id": "ad84c182-989c-5bd0-958f-23f3c8ee114b",
+      "name": "Note: About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "8d38702a-ba5c-551c-9220-a46bcd3358cc",
+      "name": "Telegram message",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "55f57312-904e-5e91-85e9-76b17275f2a8"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n//  CITEDESK TELEGRAM BOT - SETTINGS\n// ============================================================\nreturn [{\n  json: {\n    // Where the CiteDesk server runs. It must be reachable from this n8n instance.\n    citedeskUrl: 'http://localhost:8000',\n  },\n}];\n"
+      },
+      "id": "db0e79bd-05e8-5faa-a3e8-01a0e688383f",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turns an incoming Telegram message into a CiteDesk question, with the chat's recent history.\nconst cfg = $('Config').first().json;\nconst msg = $('Telegram message').first().json.message;\nif (!msg || typeof msg.text !== 'string' || !msg.text.trim()) {\n  return []; // stickers, photos, joins...: nothing to answer\n}\nlet question = msg.text.trim();\nif (question.startsWith('/start')) question = 'Hi!';\nquestion = question.slice(0, 1000);\n\nconst chatId = String(msg.chat.id);\nconst memory = $getWorkflowStaticData('global');\nmemory.chats = memory.chats || {};\nconst history = (memory.chats[chatId] || []).slice(-6);\n\nreturn [{\n  json: {\n    chatId,\n    question,\n    url: `${cfg.citedeskUrl.replace(/\\/$/, '')}/ask`,\n    request: { question, session_id: `telegram-${chatId}`, history },\n  },\n}];\n"
+      },
+      "id": "2960511d-dcf9-5c73-aee8-8f2f77748aa5",
+      "name": "Build question",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request) }}",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "c5e24819-7bab-5731-9e1c-1d9daf72fa83",
+      "name": "Ask CiteDesk",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        240
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Formats CiteDesk's answer for Telegram (HTML) and remembers the exchange for follow-up questions.\nconst q = $('Build question').first().json;\nconst a = $input.first().json || {};\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nlet message;\nif (a.error || typeof a.answer !== 'string') {\n  message = \"Sorry, I can't answer right now. Please try again in a few minutes.\";\n} else {\n  // **bold** -> <b>, [1] -> ¹ style markers stay readable in a chat\n  let text = esc(a.answer).replace(/\\*\\*(.+?)\\*\\*/g, '<b>$1</b>');\n  const sources = (a.citations || [])\n    .map((c) => `[${c.n}] ${c.url && /^https?:/.test(c.url) ? `<a href=\"${esc(c.url)}\">${esc(c.location)}</a>` : esc(c.location)}`)\n    .join('\\n');\n  message = text + (sources ? `\\n\\n<i>Sources</i>\\n${sources}` : '');\n  if (a.needs_human) {\n    message += '\\n\\n🙋 I\\'ve passed your question to a teammate. They will reply here.';\n  }\n\n  const memory = $getWorkflowStaticData('global');\n  memory.chats = memory.chats || {};\n  const history = memory.chats[q.chatId] || [];\n  history.push({ role: 'user', content: q.question }, { role: 'assistant', content: a.answer.slice(0, 2000) });\n  memory.chats[q.chatId] = history.slice(-6);\n}\n\nreturn [{ json: { chatId: q.chatId, message: message.slice(0, 4000) } }];\n"
+      },
+      "id": "3a2978f8-75df-5bc3-8a3e-a4ea60560d4b",
+      "name": "Format reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "829a97fa-235a-59ca-9a28-17e199395405",
+      "name": "Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram message": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Build question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build question": {
+      "main": [
+        [
+          {
+            "node": "Ask CiteDesk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask CiteDesk": {
+      "main": [
+        [
+          {
+            "node": "Format reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format reply": {
+      "main": [
+        [
+          {
+            "node": "Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

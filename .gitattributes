@@ -1,0 +1,7 @@
+# Normalise text files to LF; never touch binary samples.
+* text=auto eol=lf
+*.pdf binary
+*.docx binary
+*.png binary
+*.jpg binary
+*.bat text eol=crlf

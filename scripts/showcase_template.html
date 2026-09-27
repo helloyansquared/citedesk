@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CiteDesk: a support chatbot that cites its sources</title>
+<meta name="description" content="A customer-support chatbot that answers from your documents, cites every source and hands off to a human when it isn't sure. Recorded results on 37 test questions in English, French and Chinese.">
+<style>
+:root {
+  --bg: #f7f8f7;
+  --surface: #ffffff;
+  --surface-2: #f1f3f2;
+  --text: #16201c;
+  --muted: #5b6863;
+  --line: #dfe5e2;
+  --accent: #0f7a5a;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f3ec;
+  --ok: #157347;
+  --ok-soft: #e3f4ea;
+  --warn: #8a5300;
+  --warn-soft: #fff1d6;
+  --bad: #b3261e;
+  --bad-soft: #fde3e1;
+  --info: #3b4a6b;
+  --info-soft: #e8ecf5;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --grid: #e6ebe8;
+  --shadow: 0 1px 2px rgba(16, 32, 28, .06), 0 8px 24px rgba(16, 32, 28, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1412;
+    --surface: #151d1a;
+    --surface-2: #1b2521;
+    --text: #e6eeea;
+    --muted: #9aaaa3;
+    --line: #26332e;
+    --accent: #3fc796;
+    --accent-ink: #07130e;
+    --accent-soft: #163128;
+    --ok: #54d18f;
+    --ok-soft: #14301f;
+    --warn: #f2b84b;
+    --warn-soft: #3a2c10;
+    --bad: #ff8a80;
+    --bad-soft: #3b1a18;
+    --info: #b9c6e6;
+    --info-soft: #1f2638;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --grid: #22302a;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1412; --surface: #151d1a; --surface-2: #1b2521; --text: #e6eeea; --muted: #9aaaa3; --line: #26332e;
+  --accent: #3fc796; --accent-ink: #07130e; --accent-soft: #163128; --ok: #54d18f; --ok-soft: #14301f;
+  --warn: #f2b84b; --warn-soft: #3a2c10; --bad: #ff8a80; --bad-soft: #3b1a18; --info: #b9c6e6; --info-soft: #1f2638;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --grid: #22302a; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+a { color: var(--accent); }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+header.hero { padding: 56px 0 28px; }
+.eyebrow { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 4px 10px; border-radius: 999px; }
+h1 { font-size: clamp(34px, 5.5vw, 56px); line-height: 1.04; letter-spacing: -.03em; margin: 16px 0 14px; }
+.lede { font-size: 19px; color: var(--muted); max-width: 42em; margin: 0 0 24px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 10px; font-weight: 600; text-decoration: none; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; font-size: 15px; font-family: inherit; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.recorded { margin-top: 18px; font-size: 14px; color: var(--muted); }
+section { padding: 36px 0; }
+h2 { font-size: 28px; letter-spacing: -.02em; margin: 0 0 8px; }
+.sub { color: var(--muted); margin: 0 0 22px; max-width: 46em; }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
+.tile .big { font-size: 34px; font-weight: 750; letter-spacing: -.02em; line-height: 1.1; }
+.tile .big small { font-size: 18px; color: var(--muted); font-weight: 600; }
+.tile p { margin: 6px 0 0; color: var(--muted); font-size: 14.5px; }
+.cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.card .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.card .kind { font-size: 12.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.q { font-weight: 650; font-size: 16.5px; }
+.q .lang { font-size: 11.5px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin-right: 6px; vertical-align: 2px; }
+.a { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; font-size: 15px; overflow-wrap: anywhere; }
+.a p { margin: 0 0 6px; } .a p:last-child { margin: 0; }
+.a ul { margin: 4px 0 6px; padding-left: 20px; }
+.cite { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px; margin: 0 1px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; vertical-align: 1px; }
+.srcs { margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+.srcs b { color: var(--accent); margin-right: 6px; }
+.why { font-size: 13.5px; color: var(--warn); background: var(--warn-soft); border-radius: 10px; padding: 8px 12px; }
+.card .replay { align-self: flex-start; margin-top: auto; font-size: 13.5px; padding: 7px 12px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+.badge.answered, .badge.partial { background: var(--ok-soft); color: var(--ok); }
+.badge.handoff, .badge.not_found { background: var(--warn-soft); color: var(--warn); }
+.badge.off_topic, .badge.smalltalk { background: var(--info-soft); color: var(--info); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; box-shadow: var(--shadow); }
+.chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.chart-head h3 { margin: 0; font-size: 17px; }
+.chart-head p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.bars { display: grid; gap: 18px; }
+.group-label { font-size: 14px; font-weight: 650; margin-bottom: 6px; }
+.bar-row { display: grid; grid-template-columns: 90px 1fr 48px; align-items: center; gap: 10px; margin: 3px 0; font-size: 13px; color: var(--muted); }
+.track { position: relative; height: 14px; background: repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px 25%); border-radius: 0 4px 4px 0; }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 0 4px 4px 0; min-width: 2px; outline: none; }
+.fill:hover, .fill:focus-visible { filter: brightness(1.1); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px currentColor; }
+.bar-row .val { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; font-weight: 600; }
+.tip { position: fixed; pointer-events: none; z-index: 50; background: var(--text); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 8px; opacity: 0; transition: opacity .1s; max-width: 260px; }
+.steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; counter-reset: step; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; font-size: 14px; color: var(--muted); }
+.step b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+.step b::before { counter-increment: step; content: counter(step); display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 12px; margin-right: 8px; vertical-align: 1px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+.two .panel h3 { margin: 0 0 6px; font-size: 17px; }
+.two .panel p, .two .panel li { color: var(--muted); font-size: 14.5px; }
+.two .panel ul { padding-left: 18px; margin: 6px 0 0; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+details.results { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+details.results summary { cursor: pointer; padding: 16px 20px; font-weight: 650; }
+.table-wrap { overflow-x: auto; padding: 0 12px 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; border-top: 0; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pass { color: var(--ok); font-weight: 700; } .fail { color: var(--bad); font-weight: 700; }
+.shot { margin: 0; max-width: 620px; }
+.shot img { width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line); box-shadow: var(--shadow); display: block; }
+footer { padding: 40px 0 120px; color: var(--muted); font-size: 14px; }
+@media (max-width: 900px) {
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+  .steps { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 680px) {
+  header.hero { padding-top: 32px; }
+  .cards, .two { grid-template-columns: 1fr; }
+  .tiles { grid-template-columns: 1fr 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .bar-row { grid-template-columns: 70px 1fr 44px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <span class="eyebrow">CiteDesk · RAG customer support</span>
+    <h1>A support chatbot that shows its sources and knows when to call a human.</h1>
+    <p class="lede">It answers customers from a business's own documents (PDFs, Word files, web pages, spreadsheets), cites the passage behind every claim, replies in the customer's language, and hands the conversation to a person through n8n when the documents don't cover a question.</p>
+    <div class="actions">
+      <button class="btn primary" type="button" id="open-chat">Try the recorded demo</button>
+      <a class="btn" href="{{GITHUB}}">Source code on GitHub</a>
+    </div>
+    <p class="recorded">Everything on this page comes from a real run on {{RECORDED}}: <code>{{MODEL}}</code> for answers, <code>{{EMBEDDER}}</code> for search, on the knowledge base of <em>Loopline E-Bikes</em>, a fictional shop. The chat replays those recorded answers; to ask your own questions, run it locally (one command).</p>
+  </header>
+
+  <section>
+    <h2>Measured, not eyeballed</h2>
+    <p class="sub">{{N_QUESTIONS}} test questions in English, French and Chinese: questions the documents answer, questions only a person can handle (an order lookup, a discount, a complaint), off-topic requests and small talk. Each answer is graded automatically.</p>
+    <div class="tiles">{{TILES}}</div>
+  </section>
+
+  <section>
+    <h2>Sample conversations</h2>
+    <p class="sub">Recorded answers, unedited. Numbers in the text point to the passage the answer came from; press <em>Replay in chat</em> to see it in the widget, where each source expands to the quoted passage and opens the document.</p>
+    <div class="cards">{{CARDS}}</div>
+  </section>
+
+  <section>
+    <h2>Why search is hybrid</h2>
+    <p class="sub">The documents are in English. Keyword search (BM25) can't match a French or Chinese question to an English page; multilingual embeddings can. BM25 stays in the mix because it is exact where embeddings blur: error codes like <code>E07</code>, prices, product names. CiteDesk fuses both rankings.</p>
+    <div class="panel">
+      <div class="chart-head">
+        <div><h3>Right document in the top {{K}} results</h3><p>Share of the {{N_ANSWERABLE}} answerable questions, by the language they were asked in</p></div>
+        <div class="legend" aria-hidden="true">
+          <span><i style="background: var(--series-1)"></i>Keyword (BM25)</span>
+          <span><i style="background: var(--series-2)"></i>Embeddings</span>
+          <span><i style="background: var(--series-3)"></i>Hybrid (both)</span>
+        </div>
+      </div>
+      <div class="bars" role="img" aria-label="{{CHART_ARIA}}">{{CHART}}</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <p class="sub">A small, readable Python codebase: no LangChain, no vector database, no framework magic. Each guard-rail is plain code with a test.</p>
+    <div class="steps">
+      <div class="step"><b>Ingest</b>PDF, Word, Markdown, HTML, CSV and URLs are split by heading into passages. Re-indexing only re-embeds what changed.</div>
+      <div class="step"><b>Retrieve</b>BM25 and multilingual embeddings rank passages; reciprocal rank fusion merges the two lists.</div>
+      <div class="step"><b>Gate</b>If nothing is similar enough, the model gets no sources and the question goes to a person instead of being improvised.</div>
+      <div class="step"><b>Answer</b>Any OpenAI-compatible model writes a short answer as JSON, citing sources by number, in the customer's language.</div>
+      <div class="step"><b>Verify</b>Citations must point at real sources; an uncited "answer" isn't trusted. Handoffs go to n8n → Telegram, Slack or e-mail.</div>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <h3>For the business</h3>
+        <ul>
+          <li>One <code>&lt;script&gt;</code> tag adds the chat widget to any website.</li>
+          <li>When the bot can't help, the customer leaves an e-mail and the team gets the question, the reason and what the bot said.</li>
+          <li>A nightly n8n workflow re-reads the documents, so updated prices reach the bot by themselves.</li>
+          <li>Runs on a hosted model, or fully locally with Ollama when documents can't leave the building.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>For the developer</h3>
+        <ul>
+          <li>FastAPI service with <code>/ask</code>, <code>/contact</code>, <code>/reindex</code>, rate limiting and a JSONL conversation log.</li>
+          <li><code>citedesk eval</code> grades retrieval and answers on a JSONL question set, so prompt or model changes are measured.</li>
+          <li>Three n8n workflows (handoff alerts, nightly re-index, Telegram bot) with unit-tested Code nodes.</li>
+          <li>120+ tests and CI on every push.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the team sees</h2>
+    <p class="sub">When the bot hands over, n8n posts the question, the reason and the bot's reply to the team's Telegram (or Slack, or e-mail). If the customer leaves an e-mail address, that arrives too. These two alerts came from the order-status question above, in an end-to-end run with n8n 2.35.</p>
+    <figure class="shot"><img src="telegram.jpg" width="852" height="687" loading="lazy" alt="Two Telegram alerts: a customer needs a human, with the question, the reason and the bot's reply; and a customer left their e-mail"></figure>
+  </section>
+
+  <section>
+    <details class="results">
+      <summary>All {{N_QUESTIONS}} questions and how each was graded</summary>
+      <div class="table-wrap">{{TABLE}}</div>
+    </details>
+  </section>
+
+  <footer>
+    Loopline E-Bikes and all its documents are fictional, written for this demo.
+    Built by <a href="{{AUTHOR_URL}}">yesyesyanyan</a> · <a href="{{GITHUB}}">CiteDesk on GitHub</a> · MIT license
+  </footer>
+</div>
+<div class="tip" role="tooltip" id="tip"></div>
+<script>
+document.getElementById("open-chat").addEventListener("click", function () { if (window.CiteDesk) window.CiteDesk.open(); });
+document.querySelectorAll("[data-replay]").forEach(function (b) {
+  b.addEventListener("click", function () { if (window.CiteDesk) window.CiteDesk.ask(b.getAttribute("data-replay")); });
+});
+(function () {
+  var tip = document.getElementById("tip");
+  function show(e) {
+    var t = e.currentTarget;
+    tip.textContent = t.getAttribute("data-tip");
+    var r = t.getBoundingClientRect();
+    tip.style.left = Math.min(window.innerWidth - 270, Math.max(8, r.left + r.width - 40)) + "px";
+    tip.style.top = (r.top - 38) + "px";
+    tip.style.opacity = 1;
+  }
+  function hide() { tip.style.opacity = 0; }
+  document.querySelectorAll(".fill").forEach(function (f) {
+    f.addEventListener("mouseenter", show); f.addEventListener("focus", show);
+    f.addEventListener("mouseleave", hide); f.addEventListener("blur", hide);
+  });
+})();
+</script>
+<script src="widget.js" defer
+  data-recorded="recorded.json"
+  data-title="Loopline help"
+  data-subtitle="Recorded demo · answers from a real run"
+  data-greeting="Hi! This is a replay of recorded answers. Pick a question below, or use the Replay buttons on the page."
+  data-suggestions="{{SUGGESTIONS}}"></script>
+</body>
+</html>

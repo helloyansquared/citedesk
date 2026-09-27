@@ -1,0 +1,126 @@
+{
+  "name": "CiteDesk · Handoff alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🙋 CiteDesk handoff alerts\nWhen the CiteDesk bot can't (or shouldn't) answer, or a customer leaves their e-mail, CiteDesk POSTs the event here and you get a **Telegram** message with the question, the reason and what the bot said.\n\n### Setup (3 min)\n1. **Config** → set `telegramChatId`.\n2. **Alert the team** → pick your *Telegram* credential (bot token).\n3. **Publish** the workflow, open **CiteDesk event** and copy the *Production URL*.\n4. Start CiteDesk with `CITEDESK_HANDOFF_WEBHOOK=<that URL>`.\n\nWant Slack, e-mail or a helpdesk ticket instead? Swap the last node, the event data is the same.",
+        "height": 560,
+        "width": 480,
+        "color": 4
+      },
+      "id": "5ef6f717-7509-5a46-8247-d5b180866593",
+      "name": "Note: About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "citedesk-handoff",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "12e3fea3-9de6-5924-acce-bf6fbeca8202",
+      "name": "CiteDesk event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "fe89855d-810d-51cb-970b-69b0eeb00703"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n//  CITEDESK HANDOFF ALERTS - SETTINGS\n//  Edit the values below, then save.\n// ============================================================\nreturn [{\n  json: {\n    // Your Telegram chat id (the same one you use for Gig Radar works).\n    // Send /start to your bot, then open https://api.telegram.org/bot<TOKEN>/getUpdates to find it.\n    telegramChatId: 'YOUR_TELEGRAM_CHAT_ID',\n\n    // Must match CITEDESK_WEBHOOK_SECRET on the CiteDesk server. Leave '' to accept every request\n    // (fine while n8n only listens on your own computer; set one as soon as n8n is on the internet).\n    sharedSecret: '',\n  },\n}];\n"
+      },
+      "id": "5bbbaf74-946f-53c0-964b-fbe96321a262",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turns a CiteDesk event into a Telegram message for the support team.\n// Events: \"handoff\" (the bot could not or should not answer) and \"contact\" (the customer left an e-mail).\nconst cfg = $('Config').first().json;\nconst request = $('CiteDesk event').first().json;\nconst body = request.body || {};\nconst headers = request.headers || {};\n\n// Reject requests that don't carry the shared secret (when one is configured).\nif (cfg.sharedSecret && headers['x-citedesk-secret'] !== cfg.sharedSecret) {\n  return [];\n}\n\nconst esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cut = (s, n) => {\n  const t = String(s ?? '').trim();\n  return t.length > n ? t.slice(0, n - 1) + '…' : t;\n};\nconst line = (label, value, n = 300) => (value ? `<b>${label}:</b> ${esc(cut(value, n))}\\n` : '');\nconst company = body.company || 'CiteDesk';\nconst footer = [body.page_url ? `🔗 ${esc(cut(body.page_url, 200))}` : '', body.session_id ? `<i>session ${esc(cut(body.session_id, 40))}</i>` : '']\n  .filter(Boolean)\n  .join('\\n');\n\nlet message;\nif (body.event === 'handoff') {\n  const why = { not_found: 'not covered by the help docs', handoff: 'needs a person' }[body.status] || body.status;\n  const sources = Array.isArray(body.sources) && body.sources.length\n    ? `<b>Sources shown:</b>\\n${body.sources.slice(0, 4).map((s) => `• ${esc(cut(s, 120))}`).join('\\n')}\\n`\n    : '';\n  message =\n    `🙋 <b>${esc(company)}: a customer needs a human</b>\\n\\n` +\n    line('Question', body.question, 600) +\n    line('Why', body.reason ? `${body.reason} (${why})` : why, 300) +\n    '\\n' +\n    line('The bot replied', body.answer, 800) +\n    sources;\n} else if (body.event === 'contact') {\n  message =\n    `📬 <b>${esc(company)}: a customer left their e-mail</b>\\n\\n` +\n    line('E-mail', body.email, 254) +\n    line('Name', body.name, 100) +\n    line('About', body.question, 600) +\n    line('Message', body.message, 1500);\n} else {\n  message = `⚠️ <b>Unknown CiteDesk event</b>\\n<pre>${esc(cut(JSON.stringify(body), 1500))}</pre>`;\n}\n\nmessage = (message + (footer ? `\\n${footer}` : '')).trim();\nreturn [{ json: { chatId: cfg.telegramChatId, message: cut(message, 4000), event: body.event || 'unknown' } }];\n"
+      },
+      "id": "d92fa2d0-2198-5c81-842e-69ef6292955b",
+      "name": "Format alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "9a54a31d-76e4-5577-80dc-cad7ddd25881",
+      "name": "Alert the team",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "CiteDesk event": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Format alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format alert": {
+      "main": [
+        [
+          {
+            "node": "Alert the team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
