@@ -9,7 +9,7 @@ description = "A customer-support chatbot that answers from your documents, cite
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-authors = [{ name = "helloyansquared" }]
+authors = [{ name = "yesyesyanyan" }]
 keywords = ["rag", "chatbot", "customer-support", "llm", "retrieval", "bm25", "embeddings", "n8n", "fastapi"]
 dependencies = [
     "httpx>=0.27",

@@ -7,16 +7,16 @@ Retrieval-augmented generation (RAG) with the guard-rails a real business needs:
 works across languages, citations that are checked in code, a relevance gate that stops the model from
 improvising, and an n8n handoff so a person picks up what the bot can't answer.
 
-[![CI](https://github.com/helloyansquared/citedesk/actions/workflows/ci.yml/badge.svg)](https://github.com/helloyansquared/citedesk/actions/workflows/ci.yml)
-[![Showcase](https://img.shields.io/badge/showcase-live%20demo-0f7a5a)](https://helloyansquared.github.io/citedesk/)
+[![CI](https://github.com/yesyesyanyan/citedesk/actions/workflows/ci.yml/badge.svg)](https://github.com/yesyesyanyan/citedesk/actions/workflows/ci.yml)
+[![Showcase](https://img.shields.io/badge/showcase-live%20demo-0f7a5a)](https://yesyesyanyan.github.io/citedesk/)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**▶ See it in action:** [helloyansquared.github.io/citedesk](https://helloyansquared.github.io/citedesk/) replays a real
+**▶ See it in action:** [yesyesyanyan.github.io/citedesk](https://yesyesyanyan.github.io/citedesk/) replays a real
 run: 37 questions in English, French and Chinese, with the answers, their sources and the handoffs, in the actual chat
 widget. To ask your own questions, run it locally (a few commands, below).
 
-[![CiteDesk showcase: a Chinese question answered from an English PDF manual, with the quoted source](docs/showcase.jpg)](https://helloyansquared.github.io/citedesk/)
+[![CiteDesk showcase: a Chinese question answered from an English PDF manual, with the quoted source](docs/showcase.jpg)](https://yesyesyanyan.github.io/citedesk/)
 
 ---
 
@@ -125,7 +125,7 @@ alert; a normal question produced none. The `citedesk-reindex` workflow called `
 Requires Python 3.10+.
 
 ```bash
-git clone https://github.com/helloyansquared/citedesk.git
+git clone https://github.com/yesyesyanyan/citedesk.git
 cd citedesk
 python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
@@ -239,7 +239,7 @@ citedesk eval -o report.json          # full pipeline with the LLM, graded
 
 CI runs the test suite and the keyword-only retrieval eval on every push.
 
-The [showcase page](https://helloyansquared.github.io/citedesk/) is built from a saved report and replays it in the real
+The [showcase page](https://yesyesyanyan.github.io/citedesk/) is built from a saved report and replays it in the real
 widget, so it can be hosted for free without a server or an API key:
 
 ```bash

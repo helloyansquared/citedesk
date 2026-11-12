@@ -21,7 +21,7 @@ from citedesk.schema import Document, Section
 from citedesk.text import clean_whitespace
 
 SUPPORTED_SUFFIXES = {".md", ".markdown", ".txt", ".html", ".htm", ".pdf", ".docx", ".csv"}
-USER_AGENT = "CiteDesk/0.1 (+https://github.com/helloyansquared/citedesk)"
+USER_AGENT = "CiteDesk/0.1 (+https://github.com/yesyesyanyan/citedesk)"
 
 
 class LoaderError(RuntimeError):

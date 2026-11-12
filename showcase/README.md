@@ -19,4 +19,4 @@ tags:
 # CiteDesk
 
 Recorded results of CiteDesk, a customer-support chatbot that answers from your documents, cites its
-sources and hands off to a human. Source code: https://github.com/helloyansquared/citedesk
+sources and hands off to a human. Source code: https://github.com/yesyesyanyan/citedesk
