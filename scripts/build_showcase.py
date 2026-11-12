@@ -87,8 +87,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("report", help="JSON written by `citedesk eval -o ...` (with answers)")
     parser.add_argument("--recorded", required=True, help='when the run was made, e.g. "27 Sep 2026"')
-    parser.add_argument("--github", default="https://github.com/yesyesyanyan/citedesk")
-    parser.add_argument("--author-url", default="https://github.com/yesyesyanyan")
+    parser.add_argument("--github", default="https://github.com/helloyansquared/citedesk")
+    parser.add_argument("--author-url", default="https://github.com/helloyansquared")
     args = parser.parse_args()
 
     report = json.loads(Path(args.report).read_text(encoding="utf-8"))

@@ -68,7 +68,7 @@
     '<form class="composer"><label class="sr" for="cd-input">Your question</label>' +
     '<textarea id="cd-input" rows="1" maxlength="1000" placeholder="Type your question…"></textarea>' +
     '<button class="send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3 10l12 2-12 2z"/></svg></button></form>' +
-    '<footer>Answers come from our help documents · <a href="https://github.com/yesyesyanyan/citedesk" target="_blank" rel="noopener">CiteDesk</a></footer>' +
+    '<footer>Answers come from our help documents · <a href="https://github.com/helloyansquared/citedesk" target="_blank" rel="noopener">CiteDesk</a></footer>' +
     "</section>";
   var $ = function (sel) { return root.querySelector(sel); };
   var launcher = $(".launcher"), panel = $(".panel"), log = $(".log"), chips = $(".chips");
